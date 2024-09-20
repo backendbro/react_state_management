@@ -1,4 +1,6 @@
-import { useReducer, useEffect, createContext, useContext, useCallback, useMemo } from "react"
+import { useReducer, createContext, useContext, useCallback, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
+
 
 interface PokemonProps {
     id: Number 
@@ -13,53 +15,41 @@ interface PokemonProps {
 }
 
 function PokemonSource (): {pokemon: PokemonProps[], search: string, setSearch: (search: string) => void} {
+    
+    let {data: pokemon} =useQuery<PokemonProps[]|undefined>({queryKey: ["pokemon"], queryFn: () => fetch("/pokemon.json").then(response => response.json())}) 
+
+
     type PokemonStateType = {
-        pokemon: PokemonProps[], 
         search: string 
     }
 
-    type PokemonActionType = | 
-    {
-        type: "setPokemon", 
-        payload: PokemonProps[] 
-    } 
-    | 
-    
-    {
+    type PokemonActionType = {
         type: "searchPokemon", 
         search:string,  
     }
 
-    const [{pokemon, search}, dispatch] = useReducer((state: PokemonStateType, action: PokemonActionType) => {
+    const [{search}, dispatch] = useReducer((state: PokemonStateType, action: PokemonActionType) => {
 
         switch(action.type) {
-            case "setPokemon": 
-                return {...state, pokemon: action.payload}
-        
             case "searchPokemon":
                 return {...state, search: action.search}
         }
 
     }, {
-        pokemon: [],
         search: ""       
     })
 
-    useEffect(() => {
-        fetch("/pokemon.json")
-            .then((response) => response.json())
-            .then((data) => dispatch({ type: "setPokemon", payload:data}))
-    }, [])
 
 
     const setSearch = useCallback((search: string) => {
-        console.log(search)
         dispatch({type: "searchPokemon", search})
     }, [search])
 
 
-    const filteredPokemon = useMemo(() =>  pokemon.filter((po) => po.name.toLowerCase().includes(search.toLowerCase())), [pokemon, search])
-    const sortedPokemon = useMemo(() => [...filteredPokemon].sort((a, b) => a.name.toString().localeCompare(b.name.toString())), [pokemon, search])
+    pokemon = pokemon ?? [];
+    const filteredPokemon = useMemo(() => pokemon.filter((p) => p.name.toLowerCase().includes(search.toLowerCase())), [pokemon, search]).slice(0, 20) 
+    
+    const sortedPokemon = useMemo(() => [...filteredPokemon].sort((a, b) => a.name.toString().localeCompare(b.name.toString())), [filteredPokemon])
 
     return {pokemon: sortedPokemon, search, setSearch}
 }

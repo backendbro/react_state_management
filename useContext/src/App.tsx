@@ -1,9 +1,12 @@
 import {usePokemonContext, PokemonContextProvider} from "../src/hooks/UsePokemonDub"
-import "./index.css"
+import {QueryClientProvider, QueryClient} from "@tanstack/react-query"
+import { Link, Outlet, ReactLocation, Router, useMatch } from "@tanstack/react-location"
+
+const queryClient = new QueryClient()
+const location = new ReactLocation()
 
 function SearchBox () {
     const pokemon = usePokemonContext() 
-    const search = pokemon?.search
 
     return (
     <>
@@ -15,7 +18,7 @@ function SearchBox () {
       />
     </>
   )
-}
+} 
 
 function PokemonList () {
   const pokemon = usePokemonContext() 
@@ -23,22 +26,73 @@ function PokemonList () {
   return (
     <ul className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-3'> 
         {pokemon?.pokemon.map((poke) => (
-          <div key={String(poke.id)}> {poke.name} </div>
+          <Link 
+            key={String(poke.id)}
+            to ={`/pokemon/${poke.id}`}
+            
+            >
+            <div key={String(poke.id)}> {poke.name} </div>
+          </Link>
         ))}
       
     </ul>
   )
 }
 
+function PokemonDetail () {
+  const {params: {id}} = useMatch()
+  const pokemon = usePokemonContext() 
+  
+  const pokemonData = pokemon?.pokemon.find((p) => p.id === +id)
+  if (!pokemonData) {
+    return (
+      <div>No Pokemon Data</div> 
+    )
+  }
+  
+  return (
+    <>
+      <div> 
+        {JSON.stringify(pokemonData)}
+      </div>
+    </>
+  )
+}
+
+const routes = [
+
+  {
+    path:"/", 
+    element: (
+      <>
+        <SearchBox />
+        <PokemonList />
+      </>
+    )
+  }, 
+  {
+    path:"/pokemon/:id", 
+    element: (
+      <>
+        <PokemonDetail />
+      </>
+    )
+  } 
+
+]
+
 function App() {
   return (
     <>
-    <div className="mx-auto max-w-3xl">
+    <QueryClientProvider client={queryClient}>
       <PokemonContextProvider>
-          <SearchBox />
-          <PokemonList />    
+          <Router location={location} routes={routes}>
+          <div className="mx-auto max-w-3xl">
+            <Outlet />   
+          </div>
+          </Router>
       </PokemonContextProvider>
-      </div>
+    </QueryClientProvider>
     </>
   )
 }
